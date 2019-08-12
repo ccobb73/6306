@@ -1,0 +1,182 @@
+---
+title: "MSDS 6363 Case Study 1"
+author: "Alec Lepe, Che Cobb, and Andrew Wilkins"
+date: "10/08/2018"
+output: 
+  html_document:
+    keep_md: true
+---
+```{r setup, include = FALSE}
+#install.packages("R")
+knitr::opts_chunk$set(fig.width = 10, fig.length=10, fig.asp = 1/3,  message=FALSE)
+fig.path = "~/Figures"
+```
+
+### Introduction
+
+The R Team was presented with two data sets for analysis.  The first set, "Beers.csv" contains a list of 2410 US craft beers and various properties specific to each individual beer.  The second set, "Breweries.csv" contains the city and state data for 558 US breweries, and their unique Brewery ID number.  In alalyzing the data, the following questions and methods will be explored:
+
+* How many breweries are present in each state?
+* Merge beer data with the breweries data. Print the first 6
+observations and the last six observations to check the merged file.
+* Report the number of NA's in each column.
+* Compute the median alcohol content and international
+bitterness unit for each state. Plot a bar chart to compare.
+* Which state has the maximum alcoholic (ABV) beer? Which
+state has the most bitter (IBU) beer?
+* Summary statistics for the ABV variable.
+* Is there an apparent relationship between the bitterness of the
+beer and its alcoholic content? Draw a scatter plot.
+
+### URL
+https://github.com/lepealec/MSDS-6306-First-Case-Study.git
+
+### Data description.
+
+``` {r reproducibility}
+library("data.table")
+library("tidyverse")
+library('ggplot2')
+sessionInfo()
+```
+
+### Load and preview data
+
+The data was read in using the following code:
+``` {r load data}
+beers=fread("beers.csv")
+breweries=fread("breweries.csv")
+```
+
+
+### How many breweries are there per state?
+By executing the following code, we can generate a table representing the number of breweries in each state.
+```{r breweries per state by state}
+ct_brew=table(breweries[["State"]])
+ct_brew[sort(names(ct_brew))]
+```
+
+This information can be represented graphically for ease of visualization.
+``` {r plot1}
+breweries %>% ggplot(aes(x=State)) + geom_bar()+xlab("State")+ylab("Count") + 
+  scale_y_continuous(name="Count", labels = scales::comma) + 
+  ggtitle("Brewery Count by State")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+Next we'll sort the data in descending order to get an idea of how each state ranks among the others.
+```{r breweries_per_state_by_rank}
+ct_brew[order(ct_brew)]
+breweries[order(breweries[["State"]]),]
+names(ct_brew[order(ct_brew)])
+
+breweries %>% ggplot( aes(x=reorder(State,State,
+                     function(x)-length(x)))) + geom_bar()+xlab("State")+ylab("Count") + 
+  scale_y_continuous(name="Count", labels = scales::comma) +
+  ggtitle("Brewery Count by State \nBy Rank")+theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Here we can see Colorado (CO), California (CA), and Michigan (MI) have the most breweries with 47, 39, and 32 breweries respectively.
+
+Conversely, Washington DC (DC), North Dakota (ND), South Dakota (SD), and West Virginia (WV) have the fewest breweries at 1 per state.
+
+The total number of breweries can be found as follows:
+```{r total breweries}
+nrow(breweries)
+```
+
+We see there are a total of `r nrow(breweries)` breweries listed in the data set.
+
+### Merge beer data with the breweries data. Print the first 6 observations and the last six observations to check the merged file.
+
+By merging the two data sets together, we can peform more complex operations to better understand the data contained within.
+``` {r merge data sets}
+colnames(breweries)[colnames(breweries)=="Brew_ID"]="Brewery_id"
+colnames(breweries)[colnames(breweries)=="Name"]="Brewery_Name"
+colnames(beers)[colnames(beers)=="Name"]="Beer_Name"
+combined_data=merge(beers,breweries,by="Brewery_id")
+```
+First six observations of the combined data set:
+``` {r head}
+head(combined_data)
+```
+Last six observations of the combined data set:
+``` {r tail}
+tail(combined_data)
+```
+
+### Report the number of NA's in each column.
+Sum of NA's per column:
+``` {r sum of NA}
+apply(combined_data,2,function(x) sum(is.na(x)))
+```
+The above code searches every column of the combined data set and adds up each occurance of an NA for every column.
+
+### Compute the median alcohol content and international bitterness unit for each state. Plot a bar chart to compare.
+
+Next we explore the median Alcohol By Volume (ABV) and International Bittering Unit (IBU) of each state.  The code below gathers the medians for ABV and IBU for each state and presents the data in a barchart.
+
+``` {r meds}
+abv=combined_data[,median(na.omit(as.numeric(ABV))),State]
+ibu=combined_data[,median(na.omit(as.numeric(IBU))),State]
+colnames(abv)[2]="ABV"
+colnames(ibu)[2]="IBU"
+meds=merge(ibu,abv,by="State")
+```
+
+``` {r MedianPlot}
+alcohol <- melt(meds, na.rm=T, id="State")
+names(alcohol) <- c("State", "Metric", "Value")
+# One NA value is found corresponding to IBU for SD.  I replace it with 0.
+alcohol$Value[which(is.na(alcohol$Value))] <- 0
+# Make ABV values negative for proper display on the barplot
+alcohol$Value[as.character(alcohol$Metric)=="ABV"] <- -100*alcohol$Value[as.character(alcohol$Metric)=="ABV"]
+# Create the barplot
+p2 <- ggplot(alcohol, aes(x= State, y= Value, fill= Metric)) + 
+  geom_bar(stat="identity") +
+  geom_text(aes(label= ifelse(Value>0, Value, -1*Value)), vjust= 0.1,
+            hjust= -0.2, size= 2, angle= 90) +
+  scale_y_continuous(expand = c(0,0)) +
+  geom_text(aes(x=1, y= 65, label=" "), vjust=-1)
+p2 <- p2 + labs(title= "Median Alcohol Metrics by State", x ="State", 
+              y = "ABV (%) and IBU (ppm isohumulone)",
+              caption = "NOTE: SD has no information on IBU, thus 0 was used.")
+p2 <- p2 + theme(plot.title = element_text(hjust= 0.5))
+p2 <- p2 + theme(axis.text.x= element_text(size= 8, angle= 90))
+p2 <- p2 + theme(plot.caption = element_text(hjust = 0.5))
+p2
+```
+
+### Which state has the maximum alcoholic (ABV) beer? Which state has the most bitter (IBU) beer?
+
+The highest ABV can be found in:
+``` {r max abv}
+combined_data[which.max(ABV), State]
+```
+Exploring this further, we see that `r combined_data[which.max(ABV), State]` has a beer with an ABV of `r combined_data[which.max(ABV), ABV]` found in `r combined_data[which.max(ABV), Beer_Name]` by `r combined_data[which.max(ABV), Brewery_Name]`.
+
+The maximum IBU is found in:
+``` {r max ibu}
+combined_data[which.max(IBU), State]
+```
+`r combined_data[which.max(IBU), State]` has the highest IBU out every state at `r combined_data[which.max(IBU), IBU]`ppm isohumuloneu, which is found in `r combined_data[which.max(IBU), Beer_Name]` by `r combined_data[which.max(IBU), Brewery_Name]`.
+
+### Summary statistics for the ABV variable.
+
+A summary of the ABV metric yields the following information:
+``` {r summary_ABV}
+sum_abv=summary(combined_data[["ABV"]])
+sum_abv
+boxplot(combined_data[["ABV"]],main='ABV Barplot',ylab="ABV")
+```
+
+### Is there an apparent relationship between the bitterness of the beer and its alcoholic content? Draw a scatter plot.
+
+Lastly, we explore if there is a linear relationship between the ABV and the IBU.  The code below generates the plot and determines the sample correlation coefficient, r.
+``` {r correl_graph}
+ggplot(combined_data,aes(x = ABV,y = IBU ))+geom_point(na.rm=TRUE)+geom_smooth(method=lm,se=FALSE, na.rm=TRUE)+
+  ggtitle("IBU vs ABV content per Alcohol")
+r= cor(na.omit(combined_data)[["ABV"]],na.omit(combined_data)[["IBU"]])
+r
+```
+
+The data suggests there is a moderate linear relationship between ABV and IBU.  With an correlation coefficient of `r round(r,2)`, ABV describes roughly `r round((r^2)*100)`% of the variability in IBU.  So while there does appear to be a positive linear relationship, we can't say with confidence that that a higher ABV causes a great IBU.
+

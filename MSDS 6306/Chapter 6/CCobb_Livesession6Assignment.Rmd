@@ -1,0 +1,110 @@
+---
+title: "HW6"
+author: "Che' Cobb"
+date: "October 2, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggplot2")
+```
+
+
+
+```{r}
+load(file = "N-MHSS-2015-DS0001-data-r.rda")
+head(mh2015_puf)
+```
+#### b. Please create code which lists the State abbreviations without their counts, one abbreviation per State value. It does not have to in data frame format. A vector is fine.
+
+```{r, echo=FALSE}
+
+# use unique to copy with duplicate elements removed
+stateAbb <- (unique(mh2015_puf$LST))
+state.abb
+```
+
+#### c. Filter the data.frame from 1A. We are only interested in the Veterans Administration (VA) medical centers in the mainland United States-create a listing of counts of these centers by state, including only mainland locations. Alaska, Hawaii, and U.S. territories should be omitted. DC, while not a state, is in the mainland, so it should remain included. Convert this to data.frame() 
+
+
+```{r, echo=FALSE}
+library(dplyr)
+Filtered_VA<-mh2015_puf %>% select(CASEID, LST, FACILITYTYPE)
+#include only VA Med Centers
+Filtered_VA <- subset(x = Filtered_VA, FACILITYTYPE == "Veterans Administration medical center (VAMC) or other VA health care facility")
+# Subset out AK and HI dont see any U.S territories in the list
+Filtered_VA <- subset(x = Filtered_VA, LST != "AK    "& LST != "HI    " & LST != "PR    ")
+head(Filtered_VA, 5)
+```
+#### d. Create a ggplot barchart of this filtered data set. Vary the bar's colors by what State it has listed. Give it an appropriately professional title that is centered. Make sure you have informative axis labels. The State axis should be readable, not layered over each other. You're welcome to have a legend or not. 
+
+```{r}
+ggplot(data =Filtered_VA,aes(x=LST, fill=LST)) +
+labs(title="Mainland VA Hospitals by State", x = "", y="Count") +
+geom_bar() +
+coord_flip()+
+theme(plot.title = element_text(hjust = .5),axis.text.y=element_text(size=5), legend.position="none")
+```
+
+## 2. Cleaning and Bringing in New Features (60%)
+
+* **a. This graph (1D) might be somewhat misleading, as bigger states may have more hospitals, but could be more sparsely located. Read statesize.csv into your R environment. This contains essentially a vector of square miles for each state. In trying to merge it with your data.frame() from 1C, you find that they don't match. Use paste() on your LST column in 1C to see what the matter is, and write what you observe in a comment**
+
+
+```{r}
+statesize <- read.csv('statesize.csv',header = T,sep = ",")
+head(statesize)
+
+
+paste(Filtered_VA$LST)
+```
+
+There is trailing whitespace in the state abbrevations
+
+* **b. Correct the problem with the LST column using any method in R that is programmatic and easily understandable. Once you have made these state abbreviations identical to statesize.csv's Abbrev column, merge the data.frame() from 1C and statesize.csv in order to add size information**
+
+```{r}
+#trim the whitespace off abbrevations in filtered df
+Filtered_VA$LST = gsub(' ','',Filtered_VA$LST)
+#merge statesize and filterd df by Abbrev
+mergedFiltered_VA<- merge(x= Filtered_VA, y=statesize, by.x = 'LST',by.y = 'Abbrev',all.x=TRUE)
+# count the states frequency 
+mergedFiltered_VA[42,]
+```
+
+* **c. Calculate a new variable in your combined data.frame() which indicates the VA hospitals per thousand square miles**
+
+```{r}
+# count the states frequency 
+StateCount<-data.frame(table(mergedFiltered_VA$LST))
+colnames(StateCount)<- c("Abbrev","Count")
+StateCount
+# merge StateCount in to merfedFiltered datafram
+mergedFiltered_VA<-merge(x=mergedFiltered_VA,y= StateCount,  by.x = 'LST',by.y = 'Abbrev',all.x=TRUE)
+# 1000per sq miles = State Sq miles/stateCount
+mergedFiltered_VA$VAPer1K<-(mergedFiltered_VA$Count/(mergedFiltered_VA$SqMiles/1000))
+mergedFiltered_VA <-mergedFiltered_VA[!duplicated(mergedFiltered_VA$LST),]
+head(mergedFiltered_VA)
+```
+
+##### d. Create another ggplot which considers the VAs per square thousand miles, rather than just frequency. 
+* **Make sure the State axis is readable, like before. Change the title and axes as appropriate.**
+* **Modify the ggplot syntax to make your bars in descending order (there are StackOverflow topics for this, and I have demonstrated how in Live Coding in prior classes). **  
+* **Color-code the bars based on Region (see the merged data.frame)-however, change the color scheme from the default. Any set of colors is fine, so long as it is readable.**  
+* **Keep the legend-you should have four regions and therefore four colors.     e. What patterns do you see? By this metric, is there any region that seems relatively high for VA medical centers per thousand square miles? How about low? Given these data, what advice might you give your boss before you start modeling (and why)? **
+
+
+```{r}
+# remove DC since it has NA values
+mergedFiltered_VA <- subset(mergedFiltered_VA,mergedFiltered_VA$LST!='DC')
+
+
+ggplot(data =mergedFiltered_VA, aes(x=reorder(LST, VAPer1K), VAPer1K, fill=Region)) +
+labs(title="VA Hospitals by State", x = "", y="Count per Square Mile") +
+geom_bar(stat="identity") + 
+scale_fill_manual(values = c("#999999", "#E69F00", "#009E73", "#0072B2")) +
+coord_flip()+
+theme(plot.title = element_text(hjust = 0.5),axis.text.y=element_text(size=5) )
+
+```

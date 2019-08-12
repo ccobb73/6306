@@ -1,0 +1,106 @@
+---
+title: "Beer"
+author: "Che' Cobb"
+date: "October 1, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+##Loading In data file Beers.csv 
+Beers <- read.csv('Beers.csv',header = T,sep = ",")
+
+## Loading in data file Breweries.csv. File contains information about Brewerey's Name, Unique ID number, City and State of Headquarters
+Brew <- read.csv('Breweries.csv',header = T,sep = ",")
+colnames(Brew) <- c("Brewery_id","Brewery Name","City","State")
+head(Brew)
+```
+
+## 1. How many breweries are present in each state? 
+
+
+```{r}
+library(dplyr)
+state_counts <- Brew %>%
+                 group_by(State) %>%
+                 summarise(count=n())
+state_counts <-arrange(state_counts, desc(count))                    
+head(state_counts)
+
+
+```
+
+* **The 3 states with the most breweries are CO(47), CA(39) & MI(32)**
+
+
+
+## 2. Merge beer data with the breweries data. Print the first 6 observations and the last six observations to check the merged file
+
+```{r}
+# Merge the 2 data sets
+BrewMerged <- merge(Brew,Beers, by="Brewery_id",all=TRUE)
+head(BrewMerged,6)
+tail(BrewMerged,6)
+```
+
+## 3. Report the number of NA's in each column. 
+```{r}
+sapply(BrewMerged, function(x) sum(is.na(x)))
+```
+* **As you can see only 2 columns hae NA values(ABV with 62 & IBU with 1005)**
+
+## 4. Compute the median alcohol content and international bitterness unit for each state. Plot a bar chart to compare
+```{r}
+library(ggplot2)
+Medians <- aggregate(cbind(BrewMerged$ABV,BrewMerged$IBU)~State,FUN = median,BrewMerged,na.rm=TRUE)
+colnames(Medians) <- c("State","ABV","IBU")
+Medians
+
+ggplot(data=Medians,aes(State, y = ABV, fill=ABV))+geom_bar(stat = "identity")+labs(x = "State" , y = "ABV") + ggtitle("ABV median per State")+
+  coord_flip()+
+  theme(plot.title = element_text(hjust = 0.5),axis.text.y=element_text(size=5) )
+
+ggplot(data=Medians,aes(State, y = IBU, fill=IBU))+geom_bar(stat = "identity")+labs(x = "State" , y = "IBU") + ggtitle("IBU median per State")+
+  coord_flip()+
+  theme(plot.title = element_text(hjust = 0.5),axis.text.y=element_text(size=5) )
+```
+
+
+
+## 5. Which state has the maximum alcoholic (ABV) beer? Which state has the most bitter (IBU) beer
+
+```{r}
+BrewMerged[which.max(BrewMerged$ABV),]
+BrewMerged[which.max(BrewMerged$IBU),]
+
+```
+* **Upslope Brewing Company has the highest ABV count of 0.128**
+* **Astoria Brewing company has the hightest IBU of 138**
+
+## 6. Summary statistics for the ABV variable.
+```{r}
+statistics <- summary(BrewMerged$ABV)
+statistics
+
+
+```
+
+
+
+## 7. Is there an apparent relationship between the bitterness of the beer and its alcoholic content? Draw a scatter plot. 
+
+```{r}
+# To draw scatterplot to find the relationship between the bitterness of the beer and its alcoholic content:
+ggplot(BrewMerged,aes(x = ABV,y = IBU ))+geom_point(na.rm=TRUE)+geom_smooth(method=lm,se=FALSE, na.rm=TRUE)
+
+
+```

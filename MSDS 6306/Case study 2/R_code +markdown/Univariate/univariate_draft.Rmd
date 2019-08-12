@@ -1,0 +1,240 @@
+---
+title: "MSDS 6306 - Case Study 2 - Univaraite attempts to find key attrition factors"
+output: 
+  md_document:
+    variant: markdown_github
+---
+
+## Univariate Attempts to find key attrition factors
+``` {r echo=TRUE, comment=NA, results='asis'}
+
+## Reading from CaseStudy2-data.xlsx. The Excel file is on local
+library("readxl")
+library("tidyr")
+library("devtools")
+library("ggplot2")
+suppressWarnings(suppressMessages(library("dplyr")))
+library("knitr")
+library("caret")
+library("scales")
+suppressWarnings(suppressMessages(library("purrr")))
+library("grid")
+suppressWarnings(suppressMessages(library("gridExtra")))
+
+```
+``` {r echo=FALSE, comment=NA, results='asis'}
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  require(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+ if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+```
+``` {r echo=TRUE, comment=NA, results='asis'}
+
+download.file("https://raw.githubusercontent.com/cyberkoolman/msds.6306.case.study.2/master/Data/CaseStudy2-data.xlsx", "../Data/data2.xlsx", mode="wb")
+case_data <- data.frame(read_excel("../Data/data2.xlsx"))
+
+factor_cols <- c("Attrition", "BusinessTravel", "Department", "Education", "EducationField", "EnvironmentSatisfaction", "Gender", "JobInvolvement", "JobLevel", "JobRole", "JobSatisfaction", "MaritalStatus", "OverTime")
+case_data[factor_cols] <- lapply(case_data[factor_cols], factor)
+
+## Prepare attrition data
+
+attrition_data <- case_data[which(case_data$Attrition == 'Yes'), ]
+```
+
+## Univariate 1 - attrition by salary and Ratings
+``` {r echo=TRUE, comment=NA, results='asis'}
+uni_1_cols <- c("HourlyRate", "DailyRate", "MonthlyIncome", "MonthlyRate", "PercentSalaryHike", "StockOptionLevel", "PerformanceRating")
+attrition_data[uni_1_cols] %>%
+ gather() %>%     
+ ggplot(aes(x = value)) +                     
+ facet_wrap(~ key, scales = "free") +  
+ geom_histogram(fill = "darkgreen") +
+ xlab('Attrition By') + 
+ ylab('Salary and Ratings')
+
+```
+
+Relevant Features     | Initial Observation                                                                        | Compare
+--------------------- | ------------------------------------------------------------------------------------------ | --------
+Monthly Income        | **Less** the Monthly Income, employees are **far more** likely to leave                    | Fig 1.1
+Percent Salary Hike   | Less the Salary increase received, employes are more likely to leave                       | Fig 1.2
+Performance Rating    | **Lower** the Performance rating received, employees are **far more** likely to leave      | Fig 1.3
+Stock Option Level    | Less the stock option, employees are more likely to leave                                  | Fig 1.4
+
+
+## Univariate 1 - further attrition analysis
+``` {r echo=TRUE, comment=NA, results='asis'}
+ggplot(case_data, aes(x = MonthlyIncome, fill=Attrition)) + 
+    geom_histogram(position="stack", bins=30) +
+    ggtitle('Figure 1.1 Monthly Income') + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab('Monthly Income') + 
+    ylab('Attrition')
+
+
+ggplot(case_data, aes(x = PercentSalaryHike, fill=Attrition)) + 
+    geom_histogram(position="stack", bins=10) +
+    ggtitle('Figure 1.2 Percent Salary Hike') + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab('Percent Salary Hike') + 
+    ylab('Attrition')
+
+
+ggplot(case_data, aes(x = PerformanceRating, fill=Attrition)) + 
+    geom_histogram(position="stack", bins=10) +
+    ggtitle('Figure 1.3 Performance Rating') + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab('Performance Rating') + 
+    ylab('Attrition')
+
+
+ggplot(case_data, aes(x = StockOptionLevel, fill=Attrition)) + 
+    geom_histogram(position="stack", bins=10) +
+    ggtitle('Figure 1.4 Stock Option Level') + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab('Stock Option Level') + 
+    ylab('Attrition')
+
+```
+
+Relevant Features     | Comparison Observation                                                                      
+--------------------- | -------------------------------------------------------------------------------
+Monthly Income        | Could be the attrition factor, but **not** an univariate cause
+Percent Salary Hike   | Not a factor
+Performance Rating    | Could be the attrition factor, but **not** an univariate cause
+Stock Option Level    | Not a factor
+
+
+## Univariate 2 - attrition by job functions
+``` {r echo=TRUE, comment=NA, results='asis'}
+uni_2_cols <- c("Department", "JobRole", "BusinessTravel", "EnvironmentSatisfaction", "JobInvolvement", "JobLevel")
+attrition_data[uni_2_cols] %>%
+ gather() %>%     
+ ggplot(aes(x = value)) +                     
+ facet_wrap(~ key, scales = "free") +  
+ geom_bar(fill="brown") +
+ theme(axis.text.x = element_text(size  = 10, angle = 45,hjust = 1,vjust = 1))
+```
+
+## Univariate 3 - attrition by employee background
+``` {r echo=TRUE, comment=NA, results='asis'}
+uni_3_cols <- c("Education", "EducationField", "NumCompaniesWorked")
+unit3_p1 <- attrition_data[uni_3_cols] %>%
+ gather() %>%     
+ ggplot(aes(x = value)) +                     
+ facet_wrap(~ key, scales = "free") +  
+ geom_bar(fill="purple") +
+ theme(axis.text.x = element_text(size  = 10, angle = 45,hjust = 1,vjust = 1))
+
+uni_3b_cols <- c("Age", "TotalWorkingYears", "YearsAtCompany")
+unit3_p2 <- attrition_data[uni_3b_cols] %>%
+ gather() %>%     
+ ggplot(aes(x = value)) +                     
+ facet_wrap(~ key, scales = "free") +  
+ geom_histogram(fill = "purple", binwidth=1)
+
+unit3_ps <- list(unit3_p1, unit3_p2)
+multiplot(unit3_ps, cols=3)
+
+```
+
+## Univariate 4 - attrition by stress factors
+``` {r echo=TRUE, comment=NA, results='asis'}
+uni_4_cols <- c("WorkLifeBalance", "RelationshipSatisfaction", "OverTime", "TrainingTimesLastYear")
+unit4_p1 <- attrition_data[uni_4_cols] %>%
+ gather() %>%     
+ ggplot(aes(x = value)) +                     
+ facet_wrap(~ key, scales = "free") +  
+ geom_bar(fill="blue") +
+ theme(axis.text.x = element_text(size  = 10, angle = 45,hjust = 1,vjust = 1))
+
+unit4_p2 <- ggplot(data = attrition_data) + geom_histogram(aes(x = DistanceFromHome), fill = "blue", binwidth=1)
+unit4_ps <- list(unit4_p1, unit4_p2)
+multiplot(unit4_ps, cols=3)
+
+```
+
+
+## Quick glance at attrition data by department
+``` {r echo=TRUE, comment=NA, results='asis'}
+att_by_dept_tbl <- case_data %>% select(Attrition, Department) %>% group_by(Department) %>% arrange(Department) %>% table()
+
+knitr::kable(att_by_dept_tbl)
+```
+
+## Univariate 1 - attrition by department
+``` {r echo=TRUE, comment=NA, results='asis'}
+att_by_dept <- data.frame(att_by_dept_tbl)
+ggplot(att_by_dept, aes(x = reorder(Department, -Freq), y=Freq, fill=Attrition)) + 
+    geom_bar(stat = "identity") + 
+    ggtitle('Attrition by Department') + 
+    theme(plot.title = element_text(hjust = 0.5)) +
+    xlab('Department') + 
+    ylab('Attrition')
+```
+
+## Univariate 2 - attrition with Age and Years at Company
+``` {r echo=TRUE, comment=NA, results='asis'}
+featurePlot(x = case_data[, c('Age', 'YearsAtCompany')], y = case_data$Attrition, plot = "density", auto.key = list(columns = 2))
+```
+
+## Univariate 3 - attrition by job role
+``` {r echo=TRUE, comment=NA, results='asis'}
+ggplot(case_data, aes(x = JobRole, fill = Attrition)) +
+  stat_count(width = 0.5) +
+  xlab("Job Role") +
+  ylab("Count") +
+  labs(fill = "Attrition") +
+  coord_flip()
+
+ggplot(case_data, aes(x = JobRole)) + 
+  geom_bar(aes(fill = Attrition), position = 'fill') + 
+  scale_y_continuous(labels = percent_format()) +
+  ylab("Percentage") +
+  coord_flip()
+```
+
+## Univariate 4 - attrition by education field
+``` {r echo=TRUE, comment=NA, results='asis'}
+ggplot(case_data, aes(x = EducationField, ..count..)) +
+  geom_bar(aes(fill = Attrition), position="fill") +
+  theme(axis.text.x = element_text(size  = 10, angle = 45,hjust = 1,vjust = 1))
+```
+
+
+## Summary
+``` {r echo=TRUE, comment=NA, results='asis'}
+
+## Summary section
+```

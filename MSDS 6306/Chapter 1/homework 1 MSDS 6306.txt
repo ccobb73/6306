@@ -1,0 +1,128 @@
+# Question 1 - Basic Math
+
+# Part a - Function to compute the log of a positive number
+> log(64)
+[1] 4.158883
+
+# Part b -  What is the default base for the log function? log(x,base)
+
+# Part c - the log of a negative number
+# The real logarithm is undefined for negative real numbers
+> log(-15)
+[1] NaN
+Warning message:
+In log(-15) : NaNs produced
+
+# Part d - the square-root of a positive number
+> sqrt(25)
+ [1] 5
+
+
+# Question 2 - Random Number Generation
+
+# Part a - Create a vector of 15 standard normal random 
+# variables calculate its mean and SD (Standard Deviation)
+> random_vector <- rnorm(15)
+> random_vector
+ [1] -0.95479139 -0.46542266 -0.08304954  0.36724897 -0.24708140  0.13557310
+ [7]  2.03756426  0.03679634 -0.98759761  0.30532296 -1.02138596  0.13285008
+ [13] -2.21303498 -0.66902450 -1.63760589
+> mean(random_vector)
+ [1] -0.3509092
+> sd(random_vector)
+ [1] 0.9932532
+
+# Part b - Change the mean to 10 and the SD to 2 to recalculate
+# the vector of 15 random normal variables. Calculate its mean
+# and SD
+> random_vector <- rnorm(15, m = 10, sd = 2)
+> random_vector
+ [1]  9.494907 10.536562  8.488083  9.683951  9.414038 10.577543 10.471998
+ [8]  9.237055  8.185489  8.453578 10.473746  8.321931  7.438935 11.265258
+[15]  9.396469
+> mean(random_vector)
+[1] 9.429303
+> sd(random_vector)
+[1] 1.094582
+# the rnorm function generates a sample of random numbers from a 
+# normal distribution with the specified mean and standard
+# deviation properties input into the function by the user.
+# This means that every time the rnorm function is called upon 
+# to generate 15 numbers with a mean of 10 and standard deviation 
+# of 2, it simply grabs 15 numbers at random from a normal
+# distribution with the specified properties (mean and sd) and will
+# be different every time the function is called upon. The random
+# numbers are being generated from the same population with a normal
+# distribution, however, each sample of random numbers will have
+# variation in their mean and standard deviation.
+
+
+# Question 3 - Vector Operations
+
+# Part a -- c - Create 2 vectors for heights and weights of 6 individuals
+
+weights <- c(60, 72, 57, 90, 95, 72)
+heights <- c(1.80, 1.85, 1.72, 1.90, 1.74, 1.91)
+
+
+# Part d - Create a scatterplot of weight vs. height
+# Interpret the scatterplot
+
+
+plot(heights, 
+     weights, 
+     main = "Scatterplot of Weight versus Height for 6 Individuals",
+     xlab = "Height (m)",
+     ylab = "Weight (kg)")
+
+# Scatterplot is showing a slight positive correlation, estimated at 
+# r ~ 0.7, however, there is one indivdual with a height of 1.72 meters but 
+# a very high corresponding weight of 95 kilograms resulting in a large 
+# residual if a linear regression model had been fit onto the plot. Another 
+# point to note is the tall individual with a height of 1.91 meters and a 
+# rather low weight of 72 kilograms that would result in high leverage on
+# a linear regression model.
+
+# Part e - Calculate the BMI for each individual
+# BMI = weight in kg divided by the square of the height in m
+
+> BMI <- weights / (heights ^ 2)
+> BMI
+[1] 18.51852 21.03725 19.26717 24.93075 31.37799 19.73630
+
+# Part f - Calculate the mean for weight
+
+> mean_weight <- mean(weights)
+> mean_weight
+[1] 74.33333
+
+# Part g - Subtract the mean for each value of weight
+
+> residual_weights <- weights - mean_weight
+> residual_weights
+[1] -14.333333  -2.333333 -17.333333  15.666667  20.666667  -2.333333
+
+# part h - Sum the result
+# Now you know why we square the deviations from the mean to calculate a
+# standard deviation!
+
+> sum_of_residual_weights <- sum(residual_weights)
+> sum_of_residual_weights
+[1] 2.842171e-14
+
+
+# Question 4 - Enter your data science profile in R as a data frame
+# Data frame consists of two columns - data science categories, ranking
+# Categories - Computer Programming, math, statistics, machine learning, domain
+# expertise, communication and presentation skills, and data visualization
+# Ranking - 1 as worst, 5 as best for best ranking for each category
+# Create a bargraph of your data science profile
+
+> Data_Science_Categories <- c("Computer Programming", "Math", "Statistics", "Machine Learning", "Domain Expertise", "Communication & Presentation Skills", "Data Visualization")
+
+> Ranking <- c(4,4,3,2,1,2,3)
+
+> che <- data.frame(Data_Science_Categories, Ranking)
+
+> par(mar=c(11,4,4,4))
+> barplot(che$Ranking, main="Data Science Ranking", names.arg=che$Data_Science_Categories, ylab="Rankings", las=2, cex.names=.6)
